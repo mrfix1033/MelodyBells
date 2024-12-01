@@ -1,0 +1,2 @@
+class LocalizationNotFoundError(FileNotFoundError):
+    pass
