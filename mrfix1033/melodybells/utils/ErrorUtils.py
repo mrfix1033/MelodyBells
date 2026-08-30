@@ -1,55 +1,62 @@
-import logging
 import sys
 import traceback
+import typing
 from typing import Callable, Any
 
-from mrfix1033.melodybells.i18n.I18N import I18N
+from mrfix1033.melodybells.logging.Logger import Logger
 from mrfix1033.melodybells.utils import QtUtils
 
 __actions_aimed_at_reporting_error__ = [
-    "Сделайте скрин или сфоткайте экран и отправьте фото"
+    "Take a screenshot or take a picture of the screen",
+    "Send the photo to the developer",
+    "E-mail: mrfix1033@mail.ru (in the subject, specify \"MelodyBells error\")",
+    "VK/Telegram: @mrfix1033",
+    "Discord: mrfix1033"
 ]
 
 
 class ErrorUtils:
-    def __init__(self, i18n: I18N, logger: logging.Logger):
-        self.i18n = i18n
+    def __init__(self):
+        self.logger: typing.Any[Logger, None] = None
+        self.error_counter = 1
+
+    def set_logger(self, logger: Logger):
         self.logger = logger
-        self.counter = 1
 
     def register(self):
-        __set_exception_handler__(self.exception_handler)
+        _set_exception_handler(self._exception_handler)
 
-    def exception_handler(self, exctype: Exception, value: str, trace):
-        formatted_exception_string = __build_string_exception__(exctype, value, trace, self.counter)
-        self.counter += 1
+    def _exception_handler(self, exctype: Exception, value: str, trace):
+        formatted_exception_string = _build_string_exception(exctype, value, trace, self.error_counter)
+        self.error_counter += 1
 
-        description_list = ["Произошла непредвиденная ошибка. Сообщите, пожалуйста, разработчику:"]
+        description_list = ["An unexpected error has occurred. Please inform the developer:"]
         for enum in enumerate(__actions_aimed_at_reporting_error__):
             index, action = enum
-            description_list.append(__build_action_string__(index, action))
+            description_list.append(_build_action_string(index, action))
         description = '\n'.join(description_list)
 
-        QtUtils.open_error_window("Ошибка!", description + formatted_exception_string)
-        self.logger.error(formatted_exception_string)
+        print(formatted_exception_string)
+        QtUtils.open_error_window("Error!", description + formatted_exception_string)
+        if self.logger is not None:
+            self.logger.error(formatted_exception_string)
 
 
-def __build_string_exception__(exctype: Exception, value: str, trace, counter: int):
-    trace_string = __format_traceback__(trace)
+def _build_action_string(index, action):
+    return f"{index}) {action}"
+
+
+def _build_string_exception(exctype: Exception, value: str, trace, counter: int):
+    trace_string = _format_traceback(trace)
     return f"Exception #{counter}:\n" \
-           f"Class: {exctype.__name__}\n" \
-           f"description: {value}\n" \
+           f"{exctype.__name__}: {value}\n" \
            f"traceback:\n" \
            f"{trace_string}"
 
 
-def __set_exception_handler__(handler: Callable[[Exception, str, Any], None]):
+def _set_exception_handler(handler: Callable[[Exception, str, Any], None]):
     sys.excepthook = handler
 
 
-def __format_traceback__(trace):
+def _format_traceback(trace):
     return ''.join(traceback.format_tb(trace))
-
-
-def __build_action_string__(index, action):
-    return f"{index}) {action}"
